@@ -83,7 +83,7 @@
       visibility: hidden;
     }
     .splash-title {
-      font-size: clamp(1.2rem, 8vw, 3rem); /* Адаптивное масштабирование под длинное слово */
+      font-size: clamp(1.2rem, 8vw, 3rem);
       font-weight: 800;
       margin-bottom: 1rem;
       max-width: 100%;
@@ -159,7 +159,6 @@
       gap: 8px;
     }
 
-    /* Скрываем логотип на мобильных устройствах, чтобы освободить место кнопкам */
     @media (max-width: 500px) {
       .app-logo {
         display: none;
@@ -386,9 +385,10 @@
       width: 100%;
       font-weight: 700;
       line-height: 1.4;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
+      /* Отключаем перенос и разрыв слов, чтобы полагаться только на скрипт масштабирования */
+      word-break: normal;
+      overflow-wrap: normal;
+      hyphens: none;
       color: var(--text-main);
     }
     .card-back .card-text {
@@ -494,6 +494,9 @@
       visibility: hidden;
       font-weight: 700;
       line-height: 1.4;
+      word-break: normal;
+      overflow-wrap: normal;
+      hyphens: none;
     }
 
   </style>
@@ -749,7 +752,7 @@
     4|4|Политическое лидерство|процесс взаимодействия между лидером и обществом, в ходе которого лидер реализует политическую власть и направляет действия граждан.
     4|4|Политический лидер|субъект политической деятельности, способный оказывать устойчивое влияние на политическое поведение граждан и деятельность институтов власти.
     4|5|Политическая партия|организованная группа людей, выражающая интересы определённых социальных групп, стремящаяся к завоеванию власти для реализации своей программы.
-    4|5|Общественно-политическое движение|добровольное массовое объединение граждан, созданное для достижения политических целей, без стремления к власти.
+    4|5|Общественно-поли-тическое движение|добровольное массовое объединение граждан, созданное для достижения политических целей, без стремления к власти.
     4|6|Гражданское общество|совокупность негосударственных общественных структур и отношений, выражающих интересы граждан.
     4|6|Правовое государство|государство, в котором соблюдаются принципы верховенства закона, разделения властей и гарантируются права и свободы человека.
     4|7|Избирательная система|совокупность норм и процедур, регулирующих порядок выборов в органы власти и определения их результатов.
@@ -785,7 +788,7 @@
     5|3|Правоотношение|общественные отношения, урегулированные нормами права, участники которых обладают юридическими правами и обязанностями.
     5|3|Субъекты правоотношений|участники правовых отношений, обладающие юридическими правами и обязанностями (физические и юридические лица, государство).
     5|3|Объект правоотношений|то, на что направлены права и обязанности (вещи, действия, результаты деятельности и др.).
-    5|3|Юридические факты|жиবিএনские обстоятельства, с которыми норма права связывает возникновение, изменение или прекращение правоотношений.
+    5|3|Юридические факты|жизненные обстоятельства, с которыми норма права связывает возникновение, изменение или прекращение правоотношений.
     5|4|Правонарушение|противоправное, виновное деяние, причиняющее вред и влекущее юридическую ответственность.
     5|4|Преступление|общественно опасное, виновное деяние, запрещённое уголовным законом.
     5|4|Проступок|правонарушение, не достигающее степени общественной опасности преступления.
@@ -991,21 +994,29 @@
       nextCard();
     }
 
-    function fitText(textElement, text) {
+    function fitText(textElement, text, parentCard) {
+      if (text && text.length > 0) {
+        text = text.charAt(0).toUpperCase() + text.slice(1);
+      }
+      
       textMeasurer.textContent = text;
-      let fontSize = window.innerWidth > 768 ? 24 : 19; 
+      let fontSize = window.innerWidth > 768 ? 26 : 20; 
       
-      const cardWidth = Math.min(window.innerWidth * 0.85, 360);
-      textMeasurer.style.width = (cardWidth - 48) + 'px'; 
+      // Динамически получаем реальные размеры текущей карточки на экране
+      const cardRect = parentCard ? parentCard.getBoundingClientRect() : { width: Math.min(window.innerWidth * 0.85, 360), height: Math.min(window.innerHeight * 0.55, 440) };
       
-      const maxH = Math.min(window.innerHeight * 0.6, 460) - 90; 
+      const maxW = cardRect.width - 48; // padding (1.5rem) * 2
+      const maxH = cardRect.height - 80; // место под верхний отступ и нижнюю подсказку
       
+      textMeasurer.style.width = maxW + 'px';
       textMeasurer.style.fontSize = fontSize + 'px';
       
-      while (textMeasurer.scrollHeight > maxH && fontSize > 12) {
+      // Проверяем и высоту, И ширину (чтобы длинные слова не ломали верстку)
+      while ((textMeasurer.scrollHeight > maxH || textMeasurer.scrollWidth > maxW) && fontSize > 10) {
         fontSize -= 0.5;
         textMeasurer.style.fontSize = fontSize + 'px';
       }
+      
       textElement.style.fontSize = fontSize + 'px';
       textElement.textContent = text;
     }
@@ -1049,8 +1060,9 @@
       
       cardArea.appendChild(cardWrapper);
 
-      fitText(document.getElementById('cf-text'), frontText);
-      fitText(document.getElementById('cb-text'), backText);
+      // Измеряем карточку прямо в DOM
+      fitText(document.getElementById('cf-text'), frontText, cardWrapper);
+      fitText(document.getElementById('cb-text'), backText, cardWrapper);
 
       initSwipeAndFlip(cardWrapper, item);
     }
@@ -1135,7 +1147,7 @@
           if (!hasMoved && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
             hasMoved = true;
             if (Math.abs(dy) > Math.abs(dx)) {
-              isScrolling = true;
+              isScrolling = true; // Скроллинг текста (вертикальное движение)
             }
           }
 
@@ -1205,7 +1217,7 @@
           }
 
           if (hasMoved) {
-            e.preventDefault();
+            e.preventDefault(); // Предотвращаем выделение текста мышкой
             card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.05}deg)`;
             setBadgesOpacity(dx);
           }
@@ -1244,9 +1256,10 @@
     window.addEventListener('resize', () => {
       const frontText = document.getElementById('cf-text');
       const backText = document.getElementById('cb-text');
-      if(frontText && backText) {
-        fitText(frontText, frontText.textContent);
-        fitText(backText, backText.textContent);
+      const activeCard = document.getElementById('active-card');
+      if(frontText && backText && activeCard) {
+        fitText(frontText, frontText.textContent, activeCard);
+        fitText(backText, backText.textContent, activeCard);
       }
     });
 
